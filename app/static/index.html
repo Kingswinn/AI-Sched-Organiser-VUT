@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Sched-organiser</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: #0b1120;
+      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 32px 16px;
+      display: flex;
+      justify-content: center;
+    }
+    .container {
+      width: 100%;
+      max-width: 900px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 16px;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #38bdf8;
+    }
+    .today-badge {
+      background: #1e293b;
+      color: #94a3b8;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 500;
+      border: 1px solid #334155;
+    }
+    .card {
+      background: #131d32;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    }
+    .card h2 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #f1f5f9;
+    }
+    .upload-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    input[type="file"] {
+      color: #94a3b8;
+      font-size: 14px;
+    }
+    input[type="file"]::file-selector-button {
+      background: #1e293b;
+      color: #f1f5f9;
+      border: 1px solid #334155;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-right: 12px;
+      transition: background 0.2s;
+    }
+    input[type="file"]::file-selector-button:hover {
+      background: #334155;
+    }
+    button {
+      background: #0284c7;
+      color: white;
+      border: none;
+      padding: 9px 20px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background: #0369a1; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .status-msg {
+      font-size: 14px;
+      color: #94a3b8;
+      min-height: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+    th, td {
+      padding: 12px 14px;
+      text-align: left;
+      border-bottom: 1px solid #1e293b;
+      font-size: 14px;
+    }
+    th {
+      background: #0f172a;
+      color: #94a3b8;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 0.05em;
+    }
+    tr:hover td { background: rgba(255, 255, 255, 0.02); }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .badge-overdue { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .badge-today { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-upcoming { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+    .ask-row {
+      display: flex;
+      gap: 12px;
+    }
+    .ask-input {
+      flex: 1;
+      background: #0b1120;
+      border: 1px solid #334155;
+      color: #f1f5f9;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .ask-input:focus {
+      outline: none;
+      border-color: #38bdf8;
+    }
+    .answer-box {
+      background: #0b1120;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      padding: 14px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #cbd5e1;
+      white-space: pre-wrap;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>AI Sched-organiser</h1>
+      <div class="today-badge" id="todayBadge">Today: Loading...</div>
+    </header>
+
+    <!-- Deadlines Section -->
+    <section class="card">
+      <h2>Deadline Schedule</h2>
+      <div class="upload-row">
+        <input type="file" id="pdfFileInput" accept=".pdf" />
+        <button id="extractBtn" onclick="handleExtract()">Extract Deadlines</button>
+      </div>
+      <div class="status-msg" id="extractStatus"></div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 40px;">#</th>
+            <th>Task / Assessment</th>
+            <th style="width: 140px;">Due Date</th>
+            <th style="width: 180px;">Time Left</th>
+          </tr>
+        </thead>
+        <tbody id="deadlinesTableBody">
+          <tr>
+            <td colspan="4" style="text-align: center; color: #64748b; padding: 24px;">
+              No deadlines extracted yet. Upload a learner guide or schedule PDF.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Ask Section -->
+    <section class="card">
+      <h2>Ask About Document</h2>
+      <div class="ask-row">
+        <input
+          type="text"
+          id="askInput"
+          class="ask-input"
+          placeholder="Ask anything (e.g. coordinator name, email, exam rules)..."
+          onkeydown="if(event.key==='Enter') handleAsk()"
+        />
+        <button id="askBtn" onclick="handleAsk()">Ask</button>
+      </div>
+      <div class="status-msg" id="askStatus"></div>
+      <div class="answer-box" id="answerBox"></div>
+    </section>
+  </div>
+
+  <script>
+    // 1. Auto-updating live date (with null-safe check)
+    (function setLiveDate() {
+      const el = document.getElementById('todayBadge');
+      if (el) {
+        const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        el.textContent = 'Today: ' + new Date().toLocaleDateString('en-GB', opts);
+      }
+    })();
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    async function handleExtract() {
+      const fileInput = document.getElementById('pdfFileInput');
+      const statusEl = document.getElementById('extractStatus');
+      const tbody = document.getElementById('deadlinesTableBody');
+      const btn = document.getElementById('extractBtn');
+
+      if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        if (statusEl) statusEl.textContent = 'Please choose a PDF file first.';
+        return;
+      }
+
+      if (btn) btn.disabled = true;
+      if (statusEl) statusEl.textContent = 'Extracting deadlines from PDF...';
+
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+
+      try {
+        const res = await fetch('/extract', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || `Server error (${res.status})`);
+        }
+
+        const data = await res.json();
+        const deadlines = (data && data.deadlines) ? data.deadlines : [];
+
+        if (!tbody) return;
+
+        if (deadlines.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="4" style="text-align: center; color: #f87171; padding: 24px;">
+                No assessment deadlines found in this document.
+              </td>
+            </tr>`;
+          if (statusEl) statusEl.textContent = 'Extraction complete (0 deadlines found).';
+        } else {
+          tbody.innerHTML = deadlines.map((d, idx) => `
+            <tr>
+              <td>${idx + 1}</td>
+              <td style="font-weight: 500; color: #f1f5f9;">${escapeHtml(d.task)}</td>
+              <td>${escapeHtml(d.date)}</td>
+              <td><span class="badge ${d.badge_class || 'badge-upcoming'}">${escapeHtml(d.time_left)}</span></td>
+            </tr>
+          `).join('');
+          if (statusEl) statusEl.textContent = `Successfully extracted ${deadlines.length} deadlines.`;
+        }
+      } catch (err) {
+        console.error('Extract error:', err);
+        if (statusEl) statusEl.textContent = 'Error: ' + err.message;
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+        async function handleAsk() {
+      const input = document.getElementById('askInput');
+      const statusEl = document.getElementById('askStatus');
+      const answerBox = document.getElementById('answerBox');
+      const btn = document.getElementById('askBtn');
+
+      const q = input ? input.value.trim() : '';
+      if (!q) return;
+
+      if (btn) btn.disabled = true;
+      if (statusEl) statusEl.textContent = 'Thinking with Ollama (llama3.2)...';
+      if (answerBox) answerBox.style.display = 'none';
+
+      try {
+        const res = await fetch('/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: q }),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || `Server error (${res.status})`);
+        }
+
+        const data = await res.json();
+        console.log('Ask response from server:', data);
+
+        // Accepts answer, response, or result
+        const reply = data.answer || data.response || data.result;
+
+        if (answerBox) {
+          answerBox.textContent = reply || 'Ollama generated an empty response. Make sure you extracted the PDF first.';
+          answerBox.style.display = 'block';
+        }
+        if (statusEl) statusEl.textContent = '';
+      } catch (err) {
+        console.error('Ask error:', err);
+        if (statusEl) statusEl.textContent = 'Error: ' + err.message;
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
