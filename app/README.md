@@ -1,7 +1,7 @@
 # AI Sched Organiser - VUT
 
 **Vaal University of Technology - Artificial Intelligence Applications**
-**Student:** [Put Your Name + Student Number Here]
+**Student:** [Yvonne Motloung + 216155614]
 **Date:** 20 October 2026
 
 Intelligent Academic Schedule Management System that extracts deadlines from PDFs and answers questions using local AI (Ollama).
